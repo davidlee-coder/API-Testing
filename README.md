@@ -2,15 +2,15 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Security Research](https://img.shields.io/badge/Security-Research-blue.svg)](https://github.com/yourusername/web-shell-race-condition)
 
-**Level** — Practitioner<p align="center"<p align="center"></i></p>
+**Level** — Practitioner<p align="center"></i></p>
 <br>
-**Category** — API Testing / Business Logic Vulnerabilities<p align="center"<p align="center"></i></p>
+**Category** — API Testing / Business Logic Vulnerabilities<p align="center"></i></p>
+<br>  
+**PortSwigger Link** — https://portswigger.net/web-security/api-testing/lab-exploiting-unused-api-endpoint<p align="center"></i></p>
 <br>
-**PortSwigger Link** — https://portswigger.net/web-security/api-testing/lab-exploiting-unused-api-endpoint<p align="center"<p align="center"></i></p>
+**Completed** — February 11 2026<p align="center"></i></p>
 <br>
-**Completed** — February 11 2026<p align="center"<p align="center"></i></p>
-<br>
-**Tools** — Burp Suite Proxy & Repeater, normal browser interaction<p align="center"<p align="center"></i></p>
+**Tools** — Burp Suite Proxy & Repeater, normal browser interaction<p align="center"></i></p>
 <br><br>
 
 # Table of Contents
