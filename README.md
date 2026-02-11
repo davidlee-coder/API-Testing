@@ -40,11 +40,14 @@ Seeing the price drop to $0.01 in the cart after a simple method swap was a star
 
 I started by just browsing the site like any other customer. Every time I clicked a product priced at $1330, Burp caught a standard GET request to /api/products/1 with the price in the JSON response. At first, I tried a blind PATCH and PUT in Repeater, but I got a 401 Unauthorized. It felt like a dead end.
 <img width="1356" height="692" alt="image" src="https://github.com/user-attachments/assets/31627265-be1b-498c-b0f0-034572266a63" />
+<img width="1361" height="684" alt="image" src="https://github.com/user-attachments/assets/95cfa9d6-6f5b-4a72-b0ff-38c9ad785c8a" />
 <img width="1329" height="680" alt="image" src="https://github.com/user-attachments/assets/ba110d96-a446-4688-84be-a4909bfd8539" />
 <img width="1021" height="643" alt="image" src="https://github.com/user-attachments/assets/8c720048-1db7-432d-a64e-81ec72b01c3b" />
+<img width="1024" height="673" alt="image" src="https://github.com/user-attachments/assets/f803d905-4f46-4592-839f-53cf538383d4" />
 
-I realized I was testing as an anonymous guest. I logged in, added an item to my cart, and saw that same endpoint pop up again—still a GET, but now I had an authentication session.
-I grabbed that authenticated request, flipped the method to PATCH, and started a 'conversation' with the server to see what it would let me get away with:
+I realized I was testing as an anonymous guest. I logged in, added an item to my cart, and saw that same endpoint pop up again—still a GET, but now I had an authentication session. I grabbed that authenticated request, flipped the method to PATCH, and started a 'conversation' with the server to see what it would let me get away with:
+<img width="1296" height="656" alt="image" src="https://github.com/user-attachments/assets/f26e4f31-3ef7-46ff-8416-f211ee089fef" />
+<img width="1336" height="637" alt="image" src="https://github.com/user-attachments/assets/5b60dc12-f257-4f55-9b34-44f63c2f42af" />
 
 The server barked back with a 400 error, basically saying, "I only talk in application/json." Fine. I added the header.
 The 500 'Internal Error': I sent a PATCH with an empty body and hit a 500 error. Usually, a 500 is a bad sign, but here it was a win—it meant the server wasn't blocking my request anymore; it was actually trying to process it and crashing because it didn't know what to do with the empty input.
