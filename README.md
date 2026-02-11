@@ -2,15 +2,15 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Security Research](https://img.shields.io/badge/Security-Research-blue.svg)](https://github.com/yourusername/web-shell-race-condition)
 
-**Level** — Practitioner<p align="center"></i></p>
-<br><br>
-**Category** — API Testing / Business Logic Vulnerabilities<p align="center"></i></p>
-<br><br>  
-**PortSwigger Link** — https://portswigger.net/web-security/api-testing/lab-exploiting-unused-api-endpoint<p align="center"></i></p>
-<br><br>
-**Completed** — February 11 2026<p align="center"></i></p>
-<br><br>  
-**Tools** — Burp Suite Proxy & Repeater, normal browser interaction<p align="center"></i></p>
+**Level** — Practitioner<p align="center"<p align="center"></i></p>
+<br>
+**Category** — API Testing / Business Logic Vulnerabilities<p align="center"<p align="center"></i></p>
+<br>
+**PortSwigger Link** — https://portswigger.net/web-security/api-testing/lab-exploiting-unused-api-endpoint<p align="center"<p align="center"></i></p>
+<br>
+**Completed** — February 11 2026<p align="center"<p align="center"></i></p>
+<br>
+**Tools** — Burp Suite Proxy & Repeater, normal browser interaction<p align="center"<p align="center"></i></p>
 <br><br>
 
 # Table of Contents
@@ -45,25 +45,36 @@ I started by just browsing the site like any other customer. Every time I clicke
 <img width="1329" height="680" alt="image" src="https://github.com/user-attachments/assets/ba110d96-a446-4688-84be-a4909bfd8539" />
 <img width="1021" height="643" alt="image" src="https://github.com/user-attachments/assets/8c720048-1db7-432d-a64e-81ec72b01c3b" />
 <img width="1024" height="673" alt="image" src="https://github.com/user-attachments/assets/f803d905-4f46-4592-839f-53cf538383d4" />
+<p align="center"></i></p>
+<br><br>
 
 I realized I was testing as an anonymous guest. I logged in, added an item to my cart, and saw that same endpoint pop up again—still a GET, but now I had an authentication session. I grabbed that authenticated request, flipped the method to PATCH, and started a 'conversation' with the server to see what it would let me get away with:
 <img width="1296" height="656" alt="image" src="https://github.com/user-attachments/assets/f26e4f31-3ef7-46ff-8416-f211ee089fef" />
 <img width="1336" height="637" alt="image" src="https://github.com/user-attachments/assets/5b60dc12-f257-4f55-9b34-44f63c2f42af" />
+<p align="center"></i></p>
+<br><br>
 
 The server barked back with a 400 error, basically saying, "I only talk in application/json." Fine. I added the header.
 <img width="1024" height="678" alt="image" src="https://github.com/user-attachments/assets/a5323a1a-d4f1-4bbf-99de-646a530b97fe" />
+<p align="center"></i></p>
+<br><br>
 
 I sent a PATCH with an empty body and hit a 500 error. Usually, a 500 is a bad sign, but here it was a win—it meant the server wasn't blocking my request anymore; it was actually trying to process it and crashing because it didn't know what to do with the empty input. I sent a pair of empty brackets {} to see if I could trigger a better error message. It worked! The API leaked exactly what it wanted "Missing price parameter."
 <img width="1024" height="678" alt="image" src="https://github.com/user-attachments/assets/40541c45-94a2-486d-8bc3-681eb0cbfd4e" />
 <img width="1028" height="669" alt="image" src="https://github.com/user-attachments/assets/ff2cb1c7-e510-4f24-8937-d5bf81c1897c" />
-
+<p align="center"></i></p>
+<br><br>
 
 I had the key. I sent {"price": 0} in the body and held my breath and the response returned 200 OK. "price": $0.00"
 <img width="1027" height="641" alt="image" src="https://github.com/user-attachments/assets/863df472-2a5f-461e-bfe9-0eb84aa5ed48" />
+<p align="center"></i></p>
+<br><br>
 
 I hopped back over to my browser, refreshed the cart, and there it was the item was now $0.00. I checked out for basically free. It was one of those moments where you just sit back and realize: the vulnerability wasn't hidden behind some complex exploit; it was sitting right there in plain sight, just waiting for someone to change the HTTP method.
 <img width="1356" height="689" alt="image" src="https://github.com/user-attachments/assets/0c1e6087-0c29-476e-9111-ad3593b380e0" />
 <img width="1307" height="651" alt="image" src="https://github.com/user-attachments/assets/f143a904-9123-4bf9-a286-f149cebf9eef" />
+<p align="center"></i></p>
+<br><br>
 
 # Root Cause
 
