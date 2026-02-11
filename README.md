@@ -106,4 +106,4 @@ I hopped back over to my browser, refreshed the cart, and there it was the item 
 
 - Audit Your Errors: My exploit worked because the API was too helpful with its error messages (e.g., "Missing price parameter"). Use Generic Error Responses in production to avoid leaking your internal API schema to an attacker.
 
-Happy (ethical) Hacking!
+**Happy (ethical) Hacking!**
