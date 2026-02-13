@@ -36,16 +36,22 @@ Authorization Gaps: Once I’ve guessed a mutation name like deleteUser, the ser
 # Exploitation 
 
 I started by proxying all my traffic while using the site normally logging in, browsing products, and checking out. To find the GraphQL entry point, I ran ffuf with a specialized wordlist of common GraphQL suffixes. Most paths hit a dead end, but /api stood out.
-<img width="1364" height="680" alt="image" src="https://github.com/user-attachments/assets/d200e516-3e61-47b5-9a38-8d3213ef07d9" /><img width="1360" height="701" alt="image" src="https://github.com/user-attachments/assets/71721142-b1b4-4ec7-8817-ca2753958343" /
-><img width="872" height="507" alt="image" src="https://github.com/user-attachments/assets/fa6ce4b5-f170-4eb2-b75f-7cd987c3d105" />
-
+<img width="1364" height="680" alt="image" src="https://github.com/user-attachments/assets/d200e516-3e61-47b5-9a38-8d3213ef07d9" />
+<img width="1360" height="701" alt="image" src="https://github.com/user-attachments/assets/71721142-b1b4-4ec7-8817-ca2753958343" />
+<img width="872" height="507" alt="image" src="https://github.com/user-attachments/assets/fa6ce4b5-f170-4eb2-b75f-7cd987c3d105" />
+<p align="center"></i></p>
+<br><br>
 
 When I sent a GET request to /api, the server barked back with a "Query not present" error. That’s a massive tell—it’s basically the server admitting it’s waiting for a GraphQL query. I confirmed it by sending a Universal Query: GET /api?query=query{__typename}. The response {"data": {"__typename": "query"}} was my green light. I’d found the front door.
 <img width="1022" height="610" alt="image" src="https://github.com/user-attachments/assets/dd4833d8-142b-46eb-85ac-d55e2922d205" />
 <img width="1021" height="608" alt="image" src="https://github.com/user-attachments/assets/ca1a34d6-d636-4a41-aade-47bdb6397e8e" />
+<p align="center"></i></p>
+<br><br>
 
 I fired up the Burp GraphQL extension to pull the full schema, but the server hit me with a 'Defense-in-Depth' error: 'GraphQL introspection not allowed, contains __schema or type'. The developers had clearly tried to block mapping tools.
 <img width="1028" height="688" alt="image" src="https://github.com/user-attachments/assets/6bb26208-a56b-4f72-96da-4bd220bb70aa" />
+<p align="center"></i></p>
+<br><br>
 
 I decided to try a classic obfuscation bypass. I injected a newline character (%0a) immediately after the __schema keyword in my query. That tiny bit of whitespace was enough to trip up the server’s regex filter. The floodgates opened, and the full schema poured into my Site Map including a very dangerous-looking mutation called deleteOrganizationUser. Looking through the leaked schema, I found two critical pieces of the puzzle:
 
@@ -55,15 +61,20 @@ I decided to try a classic obfuscation bypass. I injected a newline character (%
 <img width="1025" height="686" alt="image" src="https://github.com/user-attachments/assets/a117d9f1-0651-4025-afa3-0daa3c6e3907" />
 <img width="1365" height="704" alt="image" src="https://github.com/user-attachments/assets/feccfd13-e735-4724-9329-b153cfd4254f" />
 <img width="1361" height="499" alt="image" src="https://github.com/user-attachments/assets/c5326b75-a20a-46d6-93b9-413306d9dade" />
-
+<p align="center"></i></p>
+<br><br>
 I used the getUser query to hunt for my target, 'Carlos'. By incrementing the ID variable, I quickly found that Carlos was User ID 3.
 <img width="1366" height="653" alt="image" src="https://github.com/user-attachments/assets/d35c83fa-dd77-4c0c-9f6d-9ab23dc21cae" />
 <img width="1365" height="706" alt="image" src="https://github.com/user-attachments/assets/ddccd83f-d37d-4ac7-97b4-bb1a22ca5255" />
+<p align="center"></i></p>
+<br><br>
 
 Now for the final move. I pivoted to the deleteOrganizationUser mutation in Burp Repeater, set the input ID to 3, and hit send. The server didn’t check if my user had the right to delete anyone else—it just executed the command. This wasn't just a GraphQL misconfiguration; it was a full Insecure Direct Object Reference (IDOR). Carlos was gone, and I’d proven that 'hidden' doesn't mean 'secure'.
 <img width="1189" height="566" alt="image" src="https://github.com/user-attachments/assets/746b007b-8c8d-44cd-b794-aebc0130f8bf" />
 <img width="1180" height="547" alt="image" src="https://github.com/user-attachments/assets/ff6ac971-04ee-41fa-8be0-37a7ca4c95c3" />
 <img width="1365" height="685" alt="image" src="https://github.com/user-attachments/assets/7a2e43eb-3bc1-4952-8cfc-f84e4e407514" />
+<p align="center"></i></p>
+<br><br>
 
 # Aha Moment
 
