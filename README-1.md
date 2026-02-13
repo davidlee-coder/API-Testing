@@ -28,14 +28,11 @@
   
 # Overview
 
-In production, many organizations disable GraphQL Introspection the feature that lets you query __schema to see the entire API map. The idea is that if an attacker can't see the "blueprint," they can't find the "rooms." However, the endpoint itself is rarely hidden; it’s usually just tucked away at a non-obvious path like /api, /gql, or /v1/graphql. 
-The Core Vulnerability:
-The danger isn't just about finding the URL; it’s about what the server does once you’re there. Even with introspection blocked, a GraphQL server is often a "leaky" talker. Universal Queries: Sending a simple query{__typename} can confirm an endpoint is GraphQL, even if it returns a 404 or 401 on standard GETs. The "Suggestions" Trap: Many servers (like Apollo) have a "did you mean?" feature enabled by default. If I guess a field like user, and it's actually getUser, the server will helpfully correct me, allowing me to manually reconstruct the schema.
-Authorization Gaps: Once I’ve guessed a mutation name like deleteUser, the server might not check if my role is allowed to trigger it, leading to Broken Function Level Authorization (BFLA).
+In production, many organizations disable GraphQL Introspection the feature that lets you query __schema to see the entire API map. The idea is that if an attacker can't see the "blueprint," they can't find the "rooms." However, the endpoint itself is rarely hidden; it’s usually just tucked away at a non-obvious path like /api, /gql, or /v1/graphql. The danger isn't just about finding the URL; it’s about what the server does once you’re there. Even with introspection blocked, a GraphQL server is often a "leaky" talker. Universal Queries: Sending a simple query{__typename} can confirm an endpoint is GraphQL, even if it returns a 404 or 401 on standard GETs. The "Suggestions" trap many servers (like Apollo) have a "did you mean?" feature enabled by default. If I guess a field like user, and it's actually getUser, the server will helpfully correct me, allowing me to manually reconstruct the schema. Once I’ve guessed a mutation name like deleteUser, the server might not check if my role is allowed to trigger it, leading to Broken Function Level Authorization (BFLA).
 
 # Aha Moment
 
-The real breakthrough didn't come from a fancy tool; it came from a failed checkout request. When /api/v2 spit back a structured GraphQL-style error instead of a generic 400, it was like the server accidentally whispered its true identity. Even with Introspection blocked, that tiny leak told me exactly what I was dealing with.I’d been assuming I’d need heavy brute-forcing or deep JavaScript Analysis to find a hidden entry point. But the truth was much simpler: the app was already talking to the GraphQL API in plain sight during normal use; it just wasn't advertising it.The moment that deleteUser mutation actually worked—without me ever having seen the official schema, it hit me, disabled Introspection is a speed bump, not a wall. GraphQL’s greatest strength is its flexibility, but that same flexibility makes it incredibly 'leaky.' If you can guess the query, the server will often just hand you the keys. It was a stark reminder that 'security through obscurity' is just an invitation for a curious attacker to start guessing
+The real breakthrough didn't come from a fancy tool; it came from a failed checkout request. When /api/v2 spit back a structured GraphQL-style error instead of a generic 400, it was like the server accidentally whispered its true identity. Even with Introspection blocked, that tiny leak told me exactly what I was dealing with.I’d been assuming I’d need heavy brute-forcing or deep JavaScript Analysis to find a hidden entry point. But the truth was much simpler: the app was already talking to the GraphQL API in plain sight during normal use; it just wasn't advertising it.The moment that deleteUser mutation actually worked—without me ever having seen the official schema, it hit me, disabled Introspection is a speed bump, not a wall. GraphQL’s greatest strength is its flexibility, but that same flexibility makes it incredibly 'leaky.' If you can guess the query, the server will often just hand you the keys. It was a stark reminder that 'security through obscurity' is just an invitation for a curious attacker to start guessing.
 
 # Exploitation 
 
@@ -90,19 +87,19 @@ Now for the final move. I pivoted to the deleteOrganizationUser mutation in Burp
 
 # Impact
 
-- **Arbitrary user deletion** — remove any account (including admin) via guessed mutation  
-- **Privilege escalation** — change roles, reset passwords, or grant admin access  
-- **Data manipulation** — create, update, or delete records via undocumented mutations  
-- **DoS potential** — complex guessed queries could cause heavy backend load (if no query cost limiting)  
-- **Schema reconstruction** — chain error messages, leaked types, and common naming conventions to rebuild schema over time  
+- **Arbitrary user deletion:** Remove any account (including admin) via guessed mutation  
+- **Privilege escalation:** Change roles, reset passwords, or grant admin access  
+- **Data manipulation:** Create, update, or delete records via undocumented mutations  
+- **DoS potential:** Complex guessed queries could cause heavy backend load (if no query cost limiting)  
+- **Schema reconstruction:** Chain error messages, leaked types, and common naming conventions to rebuild schema over time  
 In real GraphQL apps (especially with legacy or merged services), this can lead to mass account compromise or full data destruction.
 
 # Mitigations
 
-- Enforce Query Whitelisting: In production, only allow a pre-approved list of queries and mutations. Anything else should be dropped immediately.
-- Disable Field Suggestions: Turn off the "did you mean?" functionality in production environments (e.g., set debug: false in Apollo) to prevent schema reconstruction.
-- Generic Error Responses: Ensure error messages don't leak type names, field names, or stack traces. A simple "Invalid Request" is all an end-user needs.
-- Strict Authorization: Never assume a mutation is safe just because it's 'hidden.' Every resolver must have Field-Level Authorization checks to verify the user's role before executing.
+- **Enforce Query Whitelisting:** In production, only allow a pre-approved list of queries and mutations. Anything else should be dropped immediately.
+- **Disable Field Suggestions:** Turn off the "did you mean?" functionality in production environments (e.g., set debug: false in Apollo) to prevent schema reconstruction.
+- **Generic Error Responses:** Ensure error messages don't leak type names, field names, or stack traces. A simple "Invalid Request" is all an end-user needs.
+- **Strict Authorization:** Never assume a mutation is safe just because it's 'hidden.' Every resolver must have Field-Level Authorization checks to verify the user's role before executing.
 
 
 **Happy (ethical) Hacking!**
