@@ -1,0 +1,69 @@
+# Finding a Hidden GraphQL Endpoint with Introspection Defenses
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Security Research](https://img.shields.io/badge/Security-Research-blue.svg)](https://github.com/yourusername/web-shell-race-condition)
+
+**Level** — Practitioner   
+**Category** — GraphQL API Testing / Reconnaissance  
+**PortSwigger Link** — https://portswigger.net/web-security/graphql/lab-graphql-find-the-endpoint 
+**Completed** — February 12 2026  
+**Tools** — Burp Suite Proxy & Repeater, ffuf (path fuzzing), common GraphQL wordlist
+
+# Table of Contents
+
+- [Overview](#overview)
+- [My Aha Moment](#vulnerability-details)
+- [Exploitation](#exploitation)
+- [Root Cause](#root-cause)
+- [Impact](#impact)
+- [Mitigation](#mitigation)
+# Overview
+
+In production, many organizations disable GraphQL Introspection the feature that lets you query __schema to see the entire API map. The idea is that if an attacker can't see the "blueprint," they can't find the "rooms." However, the endpoint itself is rarely hidden; it’s usually just tucked away at a non-obvious path like /api, /gql, or /v1/graphql. 
+The Core Vulnerability:
+The danger isn't just about finding the URL; it’s about what the server does once you’re there. Even with introspection blocked, a GraphQL server is often a "leaky" talker. Universal Queries: Sending a simple query{__typename} can confirm an endpoint is GraphQL, even if it returns a 404 or 401 on standard GETs. The "Suggestions" Trap: Many servers (like Apollo) have a "did you mean?" feature enabled by default. If I guess a field like user, and it's actually getUser, the server will helpfully correct me, allowing me to manually reconstruct the schema.
+Authorization Gaps: Once I’ve guessed a mutation name like deleteUser, the server might not check if my role is allowed to trigger it, leading to Broken Function Level Authorization (BFLA).
+
+# Exploitation 
+
+I started by proxying all my traffic while using the site normally—logging in, browsing products, and checking out. To find the GraphQL entry point, I ran ffuf with a specialized wordlist of common GraphQL suffixes. Most paths hit a dead end, but /api stood out.
+When I sent a GET request to /api, the server barked back with a "Query not present" error. That’s a massive tell—it’s basically the server admitting it’s waiting for a GraphQL query. I confirmed it by sending a Universal Query: GET /api?query=query{__typename}. The response {"data": {"__typename": "query"}} was my green light. I’d found the front door."
+The Introspection Battle:
+"I fired up the Burp GraphQL extension to pull the full schema, but the server hit me with a 'Defense-in-Depth' error: 'GraphQL introspection not allowed, contains __schema or type'. The developers had clearly tried to block mapping tools.
+
+I decided to try a classic obfuscation bypass. I injected a newline character (%0a) immediately after the __schema keyword in my query. That tiny bit of whitespace was enough to trip up the server’s regex filter. The floodgates opened, and the full schema poured into my Site Map—including a very dangerous-looking mutation called deleteOrganizationUser."
+The Kill Chain (GraphQL + IDOR):
+"Looking through the leaked schema, I found two critical pieces of the puzzle:
+
+    A Query: getUser(id: $id) which leaked usernames based on an integer ID.
+    A Mutation: deleteOrganizationUser(input: $input) which took a user ID as a parameter.
+
+I used the getUser query to hunt for my target, 'Carlos'. By incrementing the ID variable, I quickly found that Carlos was User ID 3.
+Now for the final move. I pivoted to the deleteOrganizationUser mutation in Burp Repeater, set the input ID to 3, and hit send. The server didn’t check if my user had the right to delete anyone else—it just executed the command. This wasn't just a GraphQL misconfiguration; it was a full Insecure Direct Object Reference (IDOR). Carlos was gone, and I’d proven that 'hidden' doesn't mean 'secure'.
+
+
+# Aha Moment
+The real breakthrough didn't come from a fancy tool; it came from a failed checkout request. When /api/v2 spit back a structured GraphQL-style error instead of a generic 400, it was like the server accidentally whispered its true identity. Even with Introspection blocked, that tiny leak told me exactly what I was dealing with.I’d been assuming I’d need heavy brute-forcing or deep JavaScript Analysis to find a hidden entry point. But the truth was much simpler: the app was already talking to the GraphQL API in plain sight during normal use; it just wasn't 'advertising' it.The moment that deleteUser mutation actually worked—without me ever having seen the official schema—it hit me: Disabled Introspection is a speed bump, not a wall. GraphQL’s greatest strength is its flexibility, but that same flexibility makes it incredibly 'leaky.' If you can guess the query, the server will often just hand you the keys. It was a stark reminder that 'security through obscurity' is just an invitation for a curious attacker to start guessing.
+
+# Root Cause
+
+- GraphQL endpoint exposed at a non-obvious but predictable path (`/api/v2`)  
+- Introspection disabled (good practice), but no additional protection (auth, rate limiting, allow-list of operations)  
+- Dangerous mutations (`deleteUser`, role changes, etc.) accessible to authenticated users without fine-grained authorization  
+- Lack of operation/method allow-listing or depth limiting  
+- Helpful error messages or response shapes leaking GraphQL nature
+
+# Impact
+
+- **Arbitrary user deletion** — remove any account (including admin) via guessed mutation  
+- **Privilege escalation** — change roles, reset passwords, or grant admin access  
+- **Data manipulation** — create, update, or delete records via undocumented mutations  
+- **DoS potential** — complex guessed queries could cause heavy backend load (if no query cost limiting)  
+- **Schema reconstruction** — chain error messages, leaked types, and common naming conventions to rebuild schema over time  
+In real GraphQL apps (especially with legacy or merged services), this can lead to mass account compromise or full data destruction.
+
+# Mitigations
+
+- Enforce Query Whitelisting: In production, only allow a pre-approved list of queries and mutations. Anything else should be dropped immediately.
+- Disable Field Suggestions: Turn off the "did you mean?" functionality in production environments (e.g., set debug: false in Apollo) to prevent schema reconstruction.
+- Generic Error Responses: Ensure error messages don't leak type names, field names, or stack traces. A simple "Invalid Request" is all an end-user needs.
+- Strict Authorization: Never assume a mutation is safe just because it's 'hidden.' Every resolver must have Field-Level Authorization checks to verify the user's role before executing.
