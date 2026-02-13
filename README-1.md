@@ -33,6 +33,10 @@ The Core Vulnerability:
 The danger isn't just about finding the URL; it’s about what the server does once you’re there. Even with introspection blocked, a GraphQL server is often a "leaky" talker. Universal Queries: Sending a simple query{__typename} can confirm an endpoint is GraphQL, even if it returns a 404 or 401 on standard GETs. The "Suggestions" Trap: Many servers (like Apollo) have a "did you mean?" feature enabled by default. If I guess a field like user, and it's actually getUser, the server will helpfully correct me, allowing me to manually reconstruct the schema.
 Authorization Gaps: Once I’ve guessed a mutation name like deleteUser, the server might not check if my role is allowed to trigger it, leading to Broken Function Level Authorization (BFLA).
 
+# Aha Moment
+
+The real breakthrough didn't come from a fancy tool; it came from a failed checkout request. When /api/v2 spit back a structured GraphQL-style error instead of a generic 400, it was like the server accidentally whispered its true identity. Even with Introspection blocked, that tiny leak told me exactly what I was dealing with.I’d been assuming I’d need heavy brute-forcing or deep JavaScript Analysis to find a hidden entry point. But the truth was much simpler: the app was already talking to the GraphQL API in plain sight during normal use; it just wasn't advertising it.The moment that deleteUser mutation actually worked—without me ever having seen the official schema, it hit me, disabled Introspection is a speed bump, not a wall. GraphQL’s greatest strength is its flexibility, but that same flexibility makes it incredibly 'leaky.' If you can guess the query, the server will often just hand you the keys. It was a stark reminder that 'security through obscurity' is just an invitation for a curious attacker to start guessing
+
 # Exploitation 
 
 I started by proxying all my traffic while using the site normally logging in, browsing products, and checking out. To find the GraphQL entry point, I ran ffuf with a specialized wordlist of common GraphQL suffixes. Most paths hit a dead end, but /api stood out.
@@ -75,10 +79,6 @@ Now for the final move. I pivoted to the deleteOrganizationUser mutation in Burp
 <img width="1365" height="685" alt="image" src="https://github.com/user-attachments/assets/7a2e43eb-3bc1-4952-8cfc-f84e4e407514" />
 <p align="center"></i></p>
 <br><br>
-
-# Aha Moment
-
-The real breakthrough didn't come from a fancy tool; it came from a failed checkout request. When /api/v2 spit back a structured GraphQL-style error instead of a generic 400, it was like the server accidentally whispered its true identity. Even with Introspection blocked, that tiny leak told me exactly what I was dealing with.I’d been assuming I’d need heavy brute-forcing or deep JavaScript Analysis to find a hidden entry point. But the truth was much simpler: the app was already talking to the GraphQL API in plain sight during normal use; it just wasn't advertising it.The moment that deleteUser mutation actually worked—without me ever having seen the official schema, it hit me, disabled Introspection is a speed bump, not a wall. GraphQL’s greatest strength is its flexibility, but that same flexibility makes it incredibly 'leaky.' If you can guess the query, the server will often just hand you the keys. It was a stark reminder that 'security through obscurity' is just an invitation for a curious attacker to start guessing.
 
 # Root Cause
 
